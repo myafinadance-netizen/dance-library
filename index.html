@@ -20,29 +20,29 @@ const DANCES={
 const LEVELS=['E класс','D класс','C класс','B класс','A класс','S класс'];
 
 function App(){
-  const[activeTab,setActiveTab]=useState('dashboard');
-  const[loading,setLoading]=useState(true);
-  const[students,setStudents]=useState([]);
-  const[assessments,setAssessments]=useState([]);
-  const[criteriaData,setCriteriaData]=useState({});
-  const[figuresData,setFiguresData]=useState({});
-  const[showModal,setShowModal]=useState(false);
-  const[modalType,setModalType]=useState(null);
-  const[editingItem,setEditingItem]=useState(null);
-  const[form,setForm]=useState({});
-  const[toast,setToast]=useState(null);
-  const[selectedDance,setSelectedDance]=useState(null);
-  const[selectedClass,setSelectedClass]=useState(null);
-  const[selectedFigure,setSelectedFigure]=useState(null);
-  const[selectedCriteria,setSelectedCriteria]=useState(null);
-  const[filters,setFilters]=useState({students:{search:'',level:''}});
+  const [activeTab,setActiveTab]=useState('dashboard');
+  const [loading,setLoading]=useState(true);
+  const [students,setStudents]=useState([]);
+  const [assessments,setAssessments]=useState([]);
+  const [criteriaData,setCriteriaData]=useState({});
+  const [figuresData,setFiguresData]=useState({});
+  const [showModal,setShowModal]=useState(false);
+  const [modalType,setModalType]=useState(null);
+  const [editingItem,setEditingItem]=useState(null);
+  const [form,setForm]=useState({});
+  const [toast,setToast]=useState(null);
+  const [selectedDance,setSelectedDance]=useState(null);
+  const [selectedClass,setSelectedClass]=useState(null);
+  const [selectedFigure,setSelectedFigure]=useState(null);
+  const [selectedCriteria,setSelectedCriteria]=useState(null);
+  const [filters,setFilters]=useState({students:{search:'',level:''}});
 
   const loadKey=async(key,fallback)=>{
     try{
       if(tg?.CloudStorage){
-        return await new Promise((resolve)=>{
+        return await new Promise(resolve=>{
           tg.CloudStorage.getItem(key,(err,val)=>{
-            if(!err&&val){
+            if(!err && val){
               try{resolve(JSON.parse(val))}catch{resolve(fallback)}
             }else resolve(fallback)
           })
@@ -63,7 +63,7 @@ function App(){
 
   useEffect(()=>{
     (async()=>{
-      const [_students,_assessments,_criteria,_figures] = await Promise.all([
+      const [_students,_assessments,_criteria,_figures]=await Promise.all([
         loadKey('students',[{id:1,name:'Иванов Алексей',partner:'Петрова Мария',level:'D класс',phone:'+7 900 123-45-67',age:25},{id:2,name:'Смирнов Дмитрий',partner:'Козлова Анна',level:'C класс',phone:'+7 900 234-56-78',age:27}]),
         loadKey('assessments',[]),
         loadKey('criteriaData',{}),
@@ -111,117 +111,4 @@ function App(){
     if(modalType==='criteriaNote'){
       const key = `${form.component}_${form.subComponent}`;
       const existingData = criteriaData[key] || {};
-      const existingNotes = existingData.notes || [];
-
-      const newNote = {
-        id: Date.now(),
-        text: form.noteText,
-        source: form.source || 'Источник не указан',
-        date: new Date().toISOString().split('T')[0]
-      };
-
-      const updatedNotes = [...existingNotes, newNote];
-
-      const newData = {
-        ...criteriaData,
-        [key]: {
-          ...existingData,
-          notes: updatedNotes
-        }
-      };
-
-      setCriteriaData(newData);
-      showToast('Заметка добавлена');
-      closeModal();
-      return;
-    }
-
-    if(modalType==='figureTechnique'){
-      const key=`${form.dance}_${form.class}_${form.figureName}`;
-      setFiguresData({...figuresData,[key]:{name:form.figureName,dance:form.dance,class:form.class,technique:form.technique,notes:form.notes}});
-      showToast('Техника сохранена')
-    }
-
-    closeModal();
-  };
-
-  const deleteItem=(type,id)=>{
-    if(!confirm('Удалить?'))return;
-    if(type==='student'){setStudents(students.filter(s=>s.id!==id));showToast('Удалено','error')}
-  };
-
-  const exportData=()=>{
-    const data={students,assessments,criteriaData,figuresData};
-    const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});
-    const url=URL.createObjectURL(blob);
-    const a=document.createElement('a');
-    a.href=url;
-    a.download=`dance-library-${new Date().toISOString().split('T')[0]}.json`;
-    a.click();
-    URL.revokeObjectURL(url);
-    showToast('Экспортировано')
-  };
-
-  const filteredStudents = students.filter(s=>{
-    const f=filters.students;
-    if(f.search && !s.name.toLowerCase().includes(f.search.toLowerCase()) && !s.partner.toLowerCase().includes(f.search.toLowerCase())) return false;
-    if(f.level && s.level!==f.level) return false;
-    return true;
-  });
-
-  const stats={
-    totalStudents:students.length,
-    totalCriteria:Object.keys(criteriaData).length,
-    totalFigures:Object.keys(figuresData).length
-  };
-
-  if(loading) return(<div className="min-h-screen flex items-center justify-center"><div className="text-center"><div className="text-4xl mb-4">💃</div><div className="text-xl">Загрузка...</div></div></div>);
-
-  return(<div className="min-h-screen p-4 pb-20"><div className="max-w-7xl mx-auto">
-    {/* Header */}
-    <header className="mb-6 fade-in">
-      <div className="flex items-center justify-between mb-4">
-        <div>
-          <h1 className="text-3xl font-bold bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent">💃 Танцевальная Библиотека</h1>
-          <p className="text-slate-400 text-sm mt-1">WDSF JS 2.1</p>
-        </div>
-        <button onClick={exportData} className="px-4 py-2 bg-purple-600 rounded-lg text-sm">📊 Экспорт</button>
-      </div>
-      <nav className="flex gap-2 overflow-x-auto pb-2">
-        {[{id:'dashboard',icon:'📊',label:'Дашборд'},{id:'students',icon:'👥',label:'Ученики'},{id:'criteria',icon:'🔧',label:'Критерии'},{id:'figures',icon:'📖',label:'Фигуры'}].map(tab=>(<button key={tab.id} onClick={()=>{setActiveTab(tab.id);setSelectedDance(null);setSelectedClass(null);setSelectedFigure(null);setSelectedCriteria(null)}} className={`px-4 py-2 rounded-lg whitespace-nowrap ${activeTab===tab.id?'bg-gradient-to-r from-purple-600 to-pink-600':'bg-slate-800/50'}`}>{tab.icon} {tab.label}</button>))}
-      </nav>
-    </header>
-
-    {/* Main */}
-    <main className="fade-in">
-      {/* Тут весь твой код для dashboard, students, criteria, figures без изменений */}
-      {/* ... */}
-    </main>
-
-    {/* Modal */}
-    {showModal && (
-      <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4" onClick={closeModal}>
-        <div className="bg-slate-800 rounded-xl p-5 w-full max-w-2xl max-h-[90vh] overflow-y-auto" onClick={(e)=>e.stopPropagation()}>
-          <div className="flex justify-between items-center mb-4">
-            <h3 className="text-xl font-bold">{modalType}</h3>
-            <button onClick={closeModal} className="text-slate-400">✖</button>
-          </div>
-          <div className="space-y-4">
-            {/* Здесь формы для student, criteriaNote и figureTechnique без изменений */}
-            {/* ... */}
-          </div>
-          <div className="flex gap-3 mt-6">
-            <button onClick={saveModal} className="flex-1 px-4 py-3 bg-gradient-to-r from-purple-600 to-pink-600 rounded-lg font-bold">💾 Сохранить</button>
-            <button onClick={closeModal} className="px-4 py-3 bg-slate-700 rounded-lg">Отмена</button>
-          </div>
-        </div>
-      </div>
-    )}
-
-    {/* Toast */}
-    {toast && (<div className="fixed bottom-4 right-4 z-50"><div className={`px-4 py-3 rounded-lg shadow-lg ${toast.type==='success'?'bg-green-600':'bg-red-600'}`}>{toast.msg}</div></div>)}
-  </div></div>);
-}
-
-ReactDOM.render(<App/>,document.getElementById('root'));
-</script>
+      const existingNotes = existingData
