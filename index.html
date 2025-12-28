@@ -1,114 +1,99 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Танцевальная Библиотека</title>
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+<script crossorigin src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+<script crossorigin src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.5/babel.min.js"></script>
+<script src="https://cdn.tailwindcss.com"></script>
+<style>@keyframes fadeIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}.fade-in{animation:fadeIn .3s ease-out}</style>
+</head>
+<body class="bg-gradient-to-br from-purple-900 via-slate-900 to-blue-900 text-white">
+<div id="root"></div>
 <script type="text/babel">
-const {useState,useEffect}=React;
-const tg=window.Telegram?.WebApp;
-
-const JS_COMPONENTS={
-  'Technical Quality':['Posture','Dance Holds','Centre','Balance','Foot Skills','Body Actions','Drive Action','Preparation to Move','Rise and Fall','Swing','Pivots/Pivoting','Skilled Figures'],
-  'Movement To Music':['Timing/Shuffle Timing','Rhythm','Musical Structure'],
-  'Partnering Skills':['Physical Communication','Overbalance/Counterbalance','Time and Space','Consistency'],
-  'Choreography':['Structure','NVC','Positioning','Characterization','Energy','Atmosphere']
-};
-
-const DANCES={
-  'Waltz':{icon:'💃',classes:['H','E','D','C','B','A','S']},
-  'Tango':{icon:'🎩',classes:['H','E','D','C','B','A','S']},
-  'Viennese Waltz':{icon:'🎵',classes:['H','E','D','C','B','A','S']},
-  'Slow Foxtrot':{icon:'🦊',classes:['H','E','D','C','B','A','S']},
-  'Quickstep':{icon:'⚡',classes:['H','E','D','C','B','A','S']}
-};
-
+const {useState,useEffect}=React;const tg=window.Telegram?.WebApp;
+const JS_COMPONENTS={'Technical Quality':['Posture','Dance Holds','Centre','Balance','Foot Skills','Body Actions','Drive Action','Preparation to Move','Rise and Fall','Swing','Pivots/Pivoting','Skilled Figures'],'Movement To Music':['Timing/Shuffle Timing','Rhythm','Musical Structure'],'Partnering Skills':['Physical Communication','Overbalance/Counterbalance','Time and Space','Consistency'],'Choreography':['Structure','NVC','Positioning','Characterization','Energy','Atmosphere']};
+const DANCES={'Waltz':{icon:'💃',classes:['H','E','D','C','B','A','S']},'Tango':{icon:'🎩',classes:['H','E','D','C','B','A','S']},'Viennese Waltz':{icon:'🎵',classes:['H','E','D','C','B','A','S']},'Slow Foxtrot':{icon:'🦊',classes:['H','E','D','C','B','A','S']},'Quickstep':{icon:'⚡',classes:['H','E','D','C','B','A','S']}};
 const LEVELS=['E класс','D класс','C класс','B класс','A класс','S класс'];
-
 function App(){
-  const [activeTab,setActiveTab]=useState('dashboard');
-  const [loading,setLoading]=useState(true);
-  const [students,setStudents]=useState([]);
-  const [assessments,setAssessments]=useState([]);
-  const [criteriaData,setCriteriaData]=useState({});
-  const [figuresData,setFiguresData]=useState({});
-  const [showModal,setShowModal]=useState(false);
-  const [modalType,setModalType]=useState(null);
-  const [editingItem,setEditingItem]=useState(null);
-  const [form,setForm]=useState({});
-  const [toast,setToast]=useState(null);
-  const [selectedDance,setSelectedDance]=useState(null);
-  const [selectedClass,setSelectedClass]=useState(null);
-  const [selectedFigure,setSelectedFigure]=useState(null);
-  const [selectedCriteria,setSelectedCriteria]=useState(null);
-  const [filters,setFilters]=useState({students:{search:'',level:''}});
-
-  const loadKey=async(key,fallback)=>{
-    try{
-      if(tg?.CloudStorage){
-        return await new Promise(resolve=>{
-          tg.CloudStorage.getItem(key,(err,val)=>{
-            if(!err && val){
-              try{resolve(JSON.parse(val))}catch{resolve(fallback)}
-            }else resolve(fallback)
-          })
-        })
-      };
-      const raw=localStorage.getItem(key);
-      return raw?JSON.parse(raw):fallback
-    }catch{return fallback}
-  };
-
-  const saveKey=async(key,data)=>{
-    try{
-      const val=JSON.stringify(data);
-      if(tg?.CloudStorage) tg.CloudStorage.setItem(key,val);
-      localStorage.setItem(key,val)
-    }catch(e){console.error('saveKey error',e)}
-  };
-
-  useEffect(()=>{
-    (async()=>{
-      const [_students,_assessments,_criteria,_figures]=await Promise.all([
-        loadKey('students',[{id:1,name:'Иванов Алексей',partner:'Петрова Мария',level:'D класс',phone:'+7 900 123-45-67',age:25},{id:2,name:'Смирнов Дмитрий',partner:'Козлова Анна',level:'C класс',phone:'+7 900 234-56-78',age:27}]),
-        loadKey('assessments',[]),
-        loadKey('criteriaData',{}),
-        loadKey('figuresData',{})
-      ]);
-      setStudents(_students);
-      setAssessments(_assessments);
-      setCriteriaData(_criteria);
-      setFiguresData(_figures);
-      setLoading(false);
-      try{tg?.expand && tg.expand()}catch{}
-    })()
-  },[]);
-
-  useEffect(()=>{if(!loading) saveKey('students',students)},[students]);
-  useEffect(()=>{if(!loading) saveKey('assessments',assessments)},[assessments]);
-  useEffect(()=>{if(!loading) saveKey('criteriaData',criteriaData)},[criteriaData]);
-  useEffect(()=>{if(!loading) saveKey('figuresData',figuresData)},[figuresData]);
-
-  const showToast=(msg,type='success')=>{
-    setToast({msg,type});
-    setTimeout(()=>setToast(null),3000)
-  };
-
-  const openModal=(type,item=null)=>{
-    setModalType(type);
-    setEditingItem(item);
-    setForm(item||{});
-    setShowModal(true);
-  };
-
-  const closeModal=()=>{setShowModal(false);setForm({});setEditingItem(null);setModalType(null)};
-
-  const saveModal=()=>{
-    if(modalType==='student'){
-      if(editingItem){
-        setStudents(students.map(s=>s.id===editingItem.id?{...form,id:editingItem.id}:s));
-        showToast('Обновлено')
-      }else{
-        setStudents([...students,{...form,id:Date.now()}]);
-        showToast('Добавлено')
-      }
-    }
-
-    if(modalType==='criteriaNote'){
-      const key = `${form.component}_${form.subComponent}`;
-      const existingData = criteriaData[key] || {};
-      const existingNotes = existingData
+const[activeTab,setActiveTab]=useState('dashboard');const[loading,setLoading]=useState(true);
+const[students,setStudents]=useState([]);const[assessments,setAssessments]=useState([]);const[criteriaData,setCriteriaData]=useState({});const[figuresData,setFiguresData]=useState({});
+const[showModal,setShowModal]=useState(false);const[modalType,setModalType]=useState(null);const[editingItem,setEditingItem]=useState(null);const[form,setForm]=useState({});const[toast,setToast]=useState(null);
+const[selectedDance,setSelectedDance]=useState(null);const[selectedClass,setSelectedClass]=useState(null);const[selectedFigure,setSelectedFigure]=useState(null);const[selectedCriteria,setSelectedCriteria]=useState(null);
+const[filters,setFilters]=useState({students:{search:'',level:''}});
+const loadKey=async(key,fallback)=>{try{if(tg?.CloudStorage){return await new Promise((resolve)=>{tg.CloudStorage.getItem(key,(err,val)=>{if(!err&&val){try{resolve(JSON.parse(val))}catch{resolve(fallback)}}else resolve(fallback)})})};const raw=localStorage.getItem(key);return raw?JSON.parse(raw):fallback}catch{return fallback}};
+const saveKey=async(key,data)=>{try{const val=JSON.stringify(data);if(tg?.CloudStorage)tg.CloudStorage.setItem(key,val);localStorage.setItem(key,val)}catch(e){console.error('saveKey error',e)}};
+useEffect(()=>{(async()=>{const[_students,_assessments,_criteria,_figures]=await Promise.all([loadKey('students',[{id:1,name:'Иванов Алексей',partner:'Петрова Мария',level:'D класс',phone:'+7 900 123-45-67',age:25},{id:2,name:'Смирнов Дмитрий',partner:'Козлова Анна',level:'C класс',phone:'+7 900 234-56-78',age:27}]),loadKey('assessments',[]),loadKey('criteriaData',{}),loadKey('figuresData',{})]);setStudents(_students);setAssessments(_assessments);setCriteriaData(_criteria);setFiguresData(_figures);setLoading(false);try{tg?.expand&&tg.expand()}catch{}})()},[]);
+useEffect(()=>{if(!loading)saveKey('students',students)},[students]);useEffect(()=>{if(!loading)saveKey('assessments',assessments)},[assessments]);useEffect(()=>{if(!loading)saveKey('criteriaData',criteriaData)},[criteriaData]);useEffect(()=>{if(!loading)saveKey('figuresData',figuresData)},[figuresData]);
+const showToast=(msg,type='success')=>{setToast({msg,type});setTimeout(()=>setToast(null),3000)};
+const openModal=(type,item=null)=>{setModalType(type);setEditingItem(item);setForm(item||{});setShowModal(true)};
+const closeModal=()=>{setShowModal(false);setForm({});setEditingItem(null);setModalType(null)};
+const saveModal=()=>{
+if(modalType==='student'){if(editingItem){setStudents(students.map(s=>s.id===editingItem.id?{...form,id:editingItem.id}:s));showToast('Обновлено')}else{setStudents([...students,{...form,id:Date.now()}]);showToast('Добавлено')}}
+if(modalType==='criteriaNote'){
+const key = `${form.component}_${form.subComponent}`;
+const existingData = criteriaData[key] || {};
+const existingNotes = existingData.notes || [];
+const newNote = {id:Date.now(),text:form.noteText,source:form.source||'Источник не указан',date:new Date().toISOString().split('T')[0]};
+const updatedNotes = [...existingNotes,newNote];
+setCriteriaData({...criteriaData,[key]:{...existingData,notes:updatedNotes}});
+showToast('Заметка добавлена');closeModal();return
+}
+if(modalType==='figureTechnique'){const key=`${form.dance}_${form.class}_${form.figureName}`;setFiguresData({...figuresData,[key]:{name:form.figureName,dance:form.dance,class:form.class,technique:form.technique,notes:form.notes}});showToast('Техника сохранена')}
+closeModal()
+};
+const deleteItem=(type,id)=>{if(!confirm('Удалить?'))return;if(type==='student'){setStudents(students.filter(s=>s.id!==id));showToast('Удалено','error')}};
+const exportData=()=>{const data={students,assessments,criteriaData,figuresData};const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download=`dance-library-${new Date().toISOString().split('T')[0]}.json`;a.click();URL.revokeObjectURL(url);showToast('Экспортировано')};
+const filteredStudents=students.filter(s=>{const f=filters.students;if(f.search&&!s.name.toLowerCase().includes(f.search.toLowerCase())&&!s.partner.toLowerCase().includes(f.search.toLowerCase()))return false;if(f.level&&s.level!==f.level)return false;return true});
+const stats={totalStudents:students.length,totalCriteria:Object.keys(criteriaData).length,totalFigures:Object.keys(figuresData).length};
+if(loading)return(<div className="min-h-screen flex items-center justify-center"><div className="text-center"><div className="text-4xl mb-4">💃</div><div className="text-xl">Загрузка...</div></div></div>);
+return(<div className="min-h-screen p-4 pb-20"><div className="max-w-7xl mx-auto">
+<header className="mb-6 fade-in"><div className="flex items-center justify-between mb-4"><div><h1 className="text-3xl font-bold bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent">💃 Танцевальная Библиотека</h1><p className="text-slate-400 text-sm mt-1">WDSF JS 2.1</p></div><button onClick={exportData} className="px-4 py-2 bg-purple-600 rounded-lg text-sm">📊 Экспорт</button></div>
+<nav className="flex gap-2 overflow-x-auto pb-2">{[{id:'dashboard',icon:'📊',label:'Дашборд'},{id:'students',icon:'👥',label:'Ученики'},{id:'criteria',icon:'🔧',label:'Критерии'},{id:'figures',icon:'📖',label:'Фигуры'}].map(tab=>(<button key={tab.id} onClick={()=>{setActiveTab(tab.id);setSelectedDance(null);setSelectedClass(null);setSelectedFigure(null);setSelectedCriteria(null)}} className={`px-4 py-2 rounded-lg whitespace-nowrap ${activeTab===tab.id?'bg-gradient-to-r from-purple-600 to-pink-600':'bg-slate-800/50'}`}>{tab.icon} {tab.label}</button>))}</nav></header>
+<main className="fade-in">
+{activeTab==='dashboard'&&(<div className="space-y-6"><div className="grid grid-cols-3 gap-4">{[{label:'Учеников',value:stats.totalStudents,color:'purple'},{label:'Критериев',value:stats.totalCriteria,color:'green'},{label:'Фигур',value:stats.totalFigures,color:'pink'}].map((stat,i)=>(<div key={i} className={`bg-gradient-to-br from-${stat.color}-600/20 to-${stat.color}-800/20 border border-${stat.color}-500/30 rounded-xl p-4`}><div className={`text-${stat.color}-400 text-xs mb-1`}>{stat.label}</div><div className="text-3xl font-bold">{stat.value}</div></div>))}</div></div>)}
+{activeTab==='students'&&(<div className="bg-slate-800/50 border border-slate-700 rounded-xl p-5"><div className="flex justify-between items-center mb-4"><h2 className="text-xl font-bold">👥 Ученики</h2><button onClick={()=>openModal('student')} className="px-4 py-2 bg-gradient-to-r from-purple-600 to-pink-600 rounded-lg">+ Добавить</button></div>
+<div className="mb-4 grid grid-cols-2 gap-3"><input type="text" placeholder="🔍 Поиск..." value={filters.students.search} onChange={(e)=>setFilters({...filters,students:{...filters.students,search:e.target.value}})} className="px-4 py-2 bg-slate-900/50 border border-slate-600 rounded-lg outline-none"/>
+<select value={filters.students.level} onChange={(e)=>setFilters({...filters,students:{...filters.students,level:e.target.value}})} className="px-4 py-2 bg-slate-900/50 border border-slate-600 rounded-lg outline-none"><option value="">Все уровни</option>{LEVELS.map(l=><option key={l} value={l}>{l}</option>)}</select></div>
+<div className="space-y-3">{filteredStudents.map(student=>(<div key={student.id} className="p-4 bg-slate-900/30 rounded-lg flex justify-between items-center"><div className="flex-1"><div className="font-bold">{student.name}</div><div className="text-sm text-slate-400">Партнёр: {student.partner}</div><div className="flex gap-2 mt-2"><span className="text-xs px-2 py-1 bg-purple-600/30 rounded">{student.level}</span><span className="text-xs px-2 py-1 bg-blue-600/30 rounded">{student.phone}</span></div></div><div className="flex gap-2"><button onClick={()=>openModal('student',student)} className="text-blue-400">✏️</button><button onClick={()=>deleteItem('student',student.id)} className="text-red-400">🗑️</button></div></div>))}</div>
+{filteredStudents.length===0&&<div className="text-center text-slate-400 py-8">Нет учеников</div>}</div>)}
+{activeTab==='criteria'&&(<div className="bg-slate-800/50 border border-slate-700 rounded-xl p-5">{!selectedCriteria?(<><h2 className="text-xl font-bold mb-4">🔧 Критерии WDSF JS 2.1</h2><div className="space-y-3">{Object.entries(JS_COMPONENTS).map(([compName,subComps])=>(<div key={compName} className="space-y-2"><h3 className="font-bold text-lg text-purple-400 mt-4">{compName}</h3>{subComps.map((subComp,idx)=>{const key=`${compName}_${subComp}`;const notesCount=criteriaData[key]?.notes?.length||0;return(<div key={idx} onClick={()=>setSelectedCriteria({component:compName,subComponent:subComp})} className="p-4 bg-slate-900/30 rounded-lg cursor-pointer hover:bg-slate-900/50 flex justify-between items-center"><div><div className="font-semibold">{idx+1}. {subComp}</div>{notesCount>0&&<div className="text-xs text-green-400 mt-1">✓ {notesCount} заметок</div>}</div><div className="text-slate-400">→</div></div>)})}</div>))}</div></>):(<div><button onClick={()=>setSelectedCriteria(null)} className="mb-4 text-blue-400">← Назад</button>
+<div className="bg-slate-900/30 rounded-lg p-5 mb-4"><h3 className="text-2xl font-bold mb-2">{selectedCriteria.subComponent}</h3><div className="text-sm text-slate-400">{selectedCriteria.component}</div></div>
+<button onClick={()=>{setForm({component:selectedCriteria.component,subComponent:selectedCriteria.subComponent});openModal('criteriaNote')}} className="mb-4 px-4 py-2 bg-gradient-to-r from-purple-600 to-pink-600 rounded-lg">+ Добавить заметку</button>
+<div className="space-y-3">{(() => {
+const key = `${selectedCriteria.component}_${selectedCriteria.subComponent}`;
+const notes = criteriaData[key]?.notes || [];
+if (notes.length === 0) return <div className="text-center text-slate-400 py-8">Нет заметок. Добавьте первую!</div>;
+return notes.map((note, idx) => (
+<div key={idx} className="p-4 bg-slate-900/50 rounded-lg border-l-4 border-green-500">
+<div className="font-semibold text-green-400 mb-2">📚 {note.source}</div>
+<div className="text-sm mb-2">{note.text}</div>
+<div className="text-xs text-slate-500">{note.date}</div>
+</div>
+));
+})()}</div></div>)}</div>)}
+{activeTab==='figures'&&(<div className="bg-slate-800/50 border border-slate-700 rounded-xl p-5">{!selectedDance?(<><h2 className="text-xl font-bold mb-4">📖 База фигур</h2><div className="grid grid-cols-2 md:grid-cols-3 gap-4">{Object.entries(DANCES).map(([dance,data])=>(<button key={dance} onClick={()=>setSelectedDance(dance)} className="p-6 bg-gradient-to-br from-purple-600/20 to-blue-600/20 border border-purple-500/30 rounded-xl hover:scale-105 transition"><div className="text-4xl mb-2">{data.icon}</div><div className="font-bold">{dance}</div><div className="text-xs text-slate-400 mt-1">{Object.keys(figuresData).filter(k=>k.startsWith(dance)).length} фигур</div></button>))}</div></>):!selectedClass?(<><button onClick={()=>setSelectedDance(null)} className="mb-4 text-blue-400">← Назад</button><h2 className="text-xl font-bold mb-4">{selectedDance} - Выберите класс</h2><div className="grid grid-cols-4 md:grid-cols-7 gap-3">{DANCES[selectedDance].classes.map(cls=>(<button key={cls} onClick={()=>setSelectedClass(cls)} className="p-4 bg-purple-600/20 border border-purple-500/30 rounded-lg hover:bg-purple-600/30 transition"><div className="text-2xl font-bold">{cls}</div></button>))}</div></>):!selectedFigure?(<><button onClick={()=>setSelectedClass(null)} className="mb-4 text-blue-400">← Назад</button><h2 className="text-xl font-bold mb-4">{selectedDance} - Класс {selectedClass}</h2><button onClick={()=>{setForm({dance:selectedDance,class:selectedClass});openModal('figureTechnique')}} className="mb-4 px-4 py-2 bg-gradient-to-r from-purple-600 to-pink-600 rounded-lg">+ Добавить фигуру</button>
+<div className="space-y-3">{Object.entries(figuresData).filter(([k])=>k.startsWith(`${selectedDance}_${selectedClass}_`)).map(([key,fig])=>(<div key={key} onClick={()=>setSelectedFigure(fig)} className="p-4 bg-slate-900/30 rounded-lg cursor-pointer hover:bg-slate-900/50"><div className="font-bold">{fig.name}</div><div className="text-xs text-slate-400 mt-1">Нажмите для просмотра техники</div></div>))}
+{Object.entries(figuresData).filter(([k])=>k.startsWith(`${selectedDance}_${selectedClass}_`)).length===0&&<div className="text-center text-slate-400 py-8">Нет фигур. Добавьте первую!</div>}</div></>):(<><button onClick={()=>setSelectedFigure(null)} className="mb-4 text-blue-400">← Назад</button><div className="bg-slate-900/30 rounded-lg p-5"><h3 className="text-2xl font-bold mb-4">{selectedFigure.name}</h3><div className="text-sm text-slate-400 mb-4">{selectedFigure.dance} • Класс {selectedFigure.class}</div><div className="mb-4"><h4 className="font-bold mb-2">Техника:</h4><div className="whitespace-pre-wrap">{selectedFigure.technique||'Техника не добавлена'}</div></div>{selectedFigure.notes&&<div><h4 className="font-bold mb-2">Заметки:</h4><div className="text-sm text-slate-300">{selectedFigure.notes}</div></div>}<button onClick={()=>{setForm(selectedFigure);openModal('figureTechnique')}} className="mt-4 px-4 py-2 bg-blue-600 rounded-lg">✏️ Редактировать</button></div></>)}</div>)}
+</main>
+{showModal&&(<div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4" onClick={closeModal}><div className="bg-slate-800 rounded-xl p-5 w-full max-w-2xl max-h-[90vh] overflow-y-auto" onClick={(e)=>e.stopPropagation()}><div className="flex justify-between items-center mb-4"><h3 className="text-xl font-bold">{modalType}</h3><button onClick={closeModal} className="text-slate-400">✖</button></div>
+<div className="space-y-4">{modalType==='student'&&(<><input type="text" placeholder="Имя" value={form.name||''} onChange={(e)=>setForm({...form,name:e.target.value})} className="w-full px-4 py-2 bg-slate-900/50 border border-slate-600 rounded-lg outline-none"/>
+<input type="text" placeholder="Партнёр" value={form.partner||''} onChange={(e)=>setForm({...form,partner:e.target.value})} className="w-full px-4 py-2 bg-slate-900/50 border border-slate-600 rounded-lg outline-none"/>
+<select value={form.level||''} onChange={(e)=>setForm({...form,level:e.target.value})} className="w-full px-4 py-2 bg-slate-900/50 border border-slate-600 rounded-lg outline-none"><option value="">Уровень</option>{LEVELS.map(l=><option key={l} value={l}>{l}</option>)}</select>
+<input type="tel" placeholder="Телефон" value={form.phone||''} onChange={(e)=>setForm({...form,phone:e.target.value})} className="w-full px-4 py-2 bg-slate-900/50 border border-slate-600 rounded-lg outline-none"/>
+<input type="number" placeholder="Возраст" value={form.age||''} onChange={(e)=>setForm({...form,age:e.target.value})} className="w-full px-4 py-2 bg-slate-900/50 border border-slate-600 rounded-lg outline-none"/></>)}
+{modalType==='criteriaNote'&&(<><input type="text" placeholder="Источник (например: Fabio Selmi, Жарков)" value={form.source||''} onChange={(e)=>setForm({...form,source:e.target.value})} className="w-full px-4 py-2 bg-slate-900/50 border border-slate-600 rounded-lg outline-none"/>
+<textarea placeholder="Текст заметки (транскрипт, цитата, описание)" value={form.noteText||''} onChange={(e)=>setForm({...form,noteText:e.target.value})} className="w-full px-4 py-2 bg-slate-900/50 border border-slate-600 rounded-lg outline-none" rows="5"></textarea></>)}
+{modalType==='figureTechnique'&&(<><input type="text" placeholder="Название фигуры" value={form.figureName||''} onChange={(e)=>setForm({...form,figureName:e.target.value})} className="w-full px-4 py-2 bg-slate-900/50 border border-slate-600 rounded-lg outline-none"/>
+<textarea placeholder="Техника исполнения" value={form.technique||''} onChange={(e)=>setForm({...form,technique:e.target.value})} className="w-full px-4 py-2 bg-slate-900/50 border border-slate-600 rounded-lg outline-none" rows="8"></textarea>
+<textarea placeholder="Заметки" value={form.notes||''} onChange={(e)=>setForm({...form,notes:e.target.value})} className="w-full px-4 py-2 bg-slate-900/50 border border-slate-600 rounded-lg outline-none" rows="3"></textarea></>)}</div>
+<div className="flex gap-3 mt-6"><button onClick={saveModal} className="flex-1 px-4 py-3 bg-gradient-to-r from-purple-600 to-pink-600 rounded-lg font-bold">💾 Сохранить</button><button onClick={closeModal} className="px-4 py-3 bg-slate-700 rounded-lg">Отмена</button></div></div></div>)}
+{toast&&(<div className="fixed bottom-4 right-4 z-50"><div className={`px-4 py-3 rounded-lg shadow-lg ${toast.type==='success'?'bg-green-600':'bg-red-600'}`}>{toast.msg}</div></div>)}
+</div></div>)}
+ReactDOM.render(<App/>,document.getElementById('root'));
+</script>
+</body>
+</html>
