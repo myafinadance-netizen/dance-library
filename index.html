@@ -48,7 +48,14 @@ const DANCES = ["Waltz","Tango","Viennese","Foxtrot","Quickstep","Cha-Cha","Samb
 
 /* ========= APP ========= */
 function App() {
-  const [students, setStudents] = useState([]);
+  const [students, setStudents] = useState([
+  {
+    id: 1,
+    leader: "Иванов Алексей",
+    follower: "Петрова Мария",
+    level: "C класс"
+  }
+]);
   const [competitions, setCompetitions] = useState([]);
   const [activeStudent, setActiveStudent] = useState(null);
   const [showComp, setShowComp] = useState(false);
