@@ -1,190 +1,95 @@
 <!DOCTYPE html>
 <html lang="ru">
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>🏆 Dance Competition Journal</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Dance Library</title>
 
-<script src="https://telegram.org/js/telegram-web-app.js"></script>
-<script crossorigin src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
-<script crossorigin src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.5/babel.min.js"></script>
-<script src="https://cdn.tailwindcss.com"></script>
+  <!-- Telegram WebApp -->
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+
+  <!-- React (без Babel!) -->
+  <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+
+  <!-- Tailwind -->
+  <script src="https://cdn.tailwindcss.com"></script>
 </head>
 
-<body class="bg-gradient-to-br from-slate-900 via-purple-900 to-indigo-900 text-white">
-<div id="root"></div>
+<body class="bg-gradient-to-br from-purple-900 via-slate-900 to-blue-900 text-white">
+  <div id="root"></div>
 
-<script type="text/babel">
-const { useState, useEffect } = React;
-const tg = window.Telegram?.WebApp;
+  <script>
+    const { useState, useEffect } = React;
+    const tg = window.Telegram?.WebApp;
 
-/* ========= STORAGE ========= */
-const storage = {
-  async load(key, fallback) {
-    try {
-      if (tg?.CloudStorage) {
-        return await new Promise(res =>
-          tg.CloudStorage.getItem(key, (e, v) =>
-            res(!e && v ? JSON.parse(v) : fallback)
-          )
-        );
-      }
-      return JSON.parse(localStorage.getItem(key)) || fallback;
-    } catch {
-      return fallback;
+    function App() {
+      const [pairs, setPairs] = useState([]);
+
+      useEffect(() => {
+        tg?.expand?.();
+      }, []);
+
+      return React.createElement(
+        "div",
+        { className: "min-h-screen p-6" },
+        [
+          React.createElement(
+            "h1",
+            {
+              key: "title",
+              className: "text-3xl font-bold mb-6"
+            },
+            "👥 Пары"
+          ),
+
+          React.createElement(
+            "button",
+            {
+              key: "add",
+              onClick: () =>
+                setPairs([
+                  ...pairs,
+                  {
+                    id: Date.now(),
+                    leader: "Иванов Алексей",
+                    follower: "Петрова Мария",
+                    level: "C класс"
+                  }
+                ]),
+              className:
+                "mb-4 px-4 py-2 bg-gradient-to-r from-purple-600 to-pink-600 rounded-lg"
+            },
+            "+ Добавить пару (тест)"
+          ),
+
+          pairs.length === 0
+            ? React.createElement(
+                "div",
+                {
+                  key: "empty",
+                  className: "text-slate-400 mt-8"
+                },
+                "Пары пока не добавлены"
+              )
+            : pairs.map(pair =>
+                React.createElement(
+                  "div",
+                  {
+                    key: pair.id,
+                    className:
+                      "p-4 mb-3 bg-slate-800/50 rounded-lg border border-slate-600"
+                  },
+                  `${pair.leader} — ${pair.follower} (${pair.level})`
+                )
+              )
+        ]
+      );
     }
-  },
-  save(key, data) {
-    const v = JSON.stringify(data);
-    tg?.CloudStorage?.setItem(key, v);
-    localStorage.setItem(key, v);
-  }
-};
 
-/* ========= CONSTANTS ========= */
-const CRITERIA = ["Posture","Balance","Foot Skills","Timing","Connection"];
-const DANCES = ["Waltz","Tango","Viennese","Foxtrot","Quickstep","Cha-Cha","Samba","Rumba","Paso","Jive"];
-
-/* ========= APP ========= */
-function App() {
-  const [students, setStudents] = useState([
-  {
-    id: 1,
-    leader: "Иванов Алексей",
-    follower: "Петрова Мария",
-    level: "C класс"
-  }
-]);
-  const [competitions, setCompetitions] = useState([]);
-  const [activeStudent, setActiveStudent] = useState(null);
-  const [showComp, setShowComp] = useState(false);
-  const [form, setForm] = useState({ scores:{} });
-
-  useEffect(() => {
-    tg?.ready?.();
-    tg?.expand?.();
-    (async () => {
-      setStudents(await storage.load("students", []));
-      setCompetitions(await storage.load("competitions", []));
-    })();
-  }, []);
-
-  useEffect(() => {
-    storage.save("students", students);
-    storage.save("competitions", competitions);
-  }, [students, competitions]);
-
-  const saveCompetition = () => {
-    setCompetitions(prev => [
-      ...prev,
-      {
-        id: Date.now(),
-        studentId: activeStudent.id,
-        ...form
-      }
-    ]);
-    setForm({ scores:{} });
-    setShowComp(false);
-  };
-
-  if (!activeStudent) {
-    return (
-      <div className="p-4 max-w-xl mx-auto">
-        <h1 className="text-2xl font-bold mb-4">👥 Пары</h1>
-        {students.map(s => (
-          <div key={s.id}
-            onClick={() => setActiveStudent(s)}
-            className="bg-slate-800/50 p-4 rounded-lg mb-3 cursor-pointer">
-            <div className="font-bold">{s.leader} – {s.follower}</div>
-            <div className="text-sm text-slate-400">{s.level}</div>
-          </div>
-        ))}
-      </div>
+    ReactDOM.createRoot(document.getElementById("root")).render(
+      React.createElement(App)
     );
-  }
-
-  const comps = competitions.filter(c => c.studentId === activeStudent.id);
-
-  return (
-    <div className="p-4 max-w-3xl mx-auto">
-      <button className="text-blue-400 mb-3"
-        onClick={() => setActiveStudent(null)}>← Назад</button>
-
-      <h1 className="text-2xl font-bold mb-2">
-        {activeStudent.leader} – {activeStudent.follower}
-      </h1>
-
-      <h2 className="text-xl font-bold mt-6 mb-3">🏆 Соревнования</h2>
-
-      {comps.map(c => {
-        const avg =
-          Object.values(c.scores).reduce((a,b)=>a+b,0) /
-          Object.values(c.scores).length;
-
-        return (
-          <div key={c.id} className="bg-slate-800/50 p-4 rounded mb-3">
-            <div className="font-bold">{c.name}</div>
-            <div className="text-sm text-slate-400">
-              {c.date} • {c.dance} • ⭐ {avg.toFixed(1)}
-            </div>
-            <div className="text-sm mt-2">{c.comment}</div>
-          </div>
-        );
-      })}
-
-      <button
-        onClick={() => setShowComp(true)}
-        className="mt-4 bg-purple-600 px-4 py-2 rounded">
-        ➕ Добавить соревнование
-      </button>
-
-      {showComp && (
-        <div className="fixed inset-0 bg-black/70 flex items-center justify-center">
-          <div className="bg-slate-800 p-5 rounded-xl w-full max-w-md">
-            <input className="w-full mb-2 px-3 py-2 bg-slate-900 rounded"
-              placeholder="Название турнира"
-              onChange={e => setForm({ ...form, name:e.target.value })} />
-
-            <input type="date"
-              className="w-full mb-2 px-3 py-2 bg-slate-900 rounded"
-              onChange={e => setForm({ ...form, date:e.target.value })} />
-
-            <select className="w-full mb-2 px-3 py-2 bg-slate-900 rounded"
-              onChange={e => setForm({ ...form, dance:e.target.value })}>
-              <option>Танец</option>
-              {DANCES.map(d => <option key={d}>{d}</option>)}
-            </select>
-
-            {CRITERIA.map(c => (
-              <input key={c} type="number" min="1" max="10"
-                className="w-full mb-2 px-3 py-2 bg-slate-900 rounded"
-                placeholder={`${c} (1–10)`}
-                onChange={e =>
-                  setForm({
-                    ...form,
-                    scores:{ ...form.scores, [c]:Number(e.target.value) }
-                  })
-                } />
-            ))}
-
-            <textarea className="w-full mb-3 px-3 py-2 bg-slate-900 rounded"
-              placeholder="Комментарий"
-              onChange={e => setForm({ ...form, comment:e.target.value })} />
-
-            <button
-              onClick={saveCompetition}
-              className="w-full bg-purple-600 py-2 rounded">
-              Сохранить старт
-            </button>
-          </div>
-        </div>
-      )}
-    </div>
-  );
-}
-
-ReactDOM.render(<App />, document.getElementById("root"));
-</script>
+  </script>
 </body>
 </html>
