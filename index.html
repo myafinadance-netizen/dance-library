@@ -1,288 +1,183 @@
 <!DOCTYPE html>
 <html lang="ru">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>💃 Танцевальная библиотека</title>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>🏆 Dance Competition Journal</title>
 
-  <!-- Telegram WebApp -->
-  <script src="https://telegram.org/js/telegram-web-app.js"></script>
-
-  <!-- React -->
-  <script crossorigin src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
-  <script crossorigin src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.5/babel.min.js"></script>
-
-  <!-- Tailwind -->
-  <script src="https://cdn.tailwindcss.com"></script>
-
-  <style>
-    @keyframes fadeIn {
-      from { opacity: 0; transform: translateY(10px); }
-      to { opacity: 1; transform: translateY(0); }
-    }
-    .fade-in { animation: fadeIn .3s ease-out; }
-  </style>
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+<script crossorigin src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+<script crossorigin src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.5/babel.min.js"></script>
+<script src="https://cdn.tailwindcss.com"></script>
 </head>
 
-<body class="bg-gradient-to-br from-purple-900 via-slate-900 to-blue-900 text-white">
+<body class="bg-gradient-to-br from-slate-900 via-purple-900 to-indigo-900 text-white">
 <div id="root"></div>
 
 <script type="text/babel">
 const { useState, useEffect } = React;
 const tg = window.Telegram?.WebApp;
 
-/* ================= STORAGE ================= */
-
+/* ========= STORAGE ========= */
 const storage = {
   async load(key, fallback) {
     try {
       if (tg?.CloudStorage) {
-        return await new Promise(resolve => {
-          tg.CloudStorage.getItem(key, (err, value) => {
-            if (err || !value) return resolve(fallback);
-            try { resolve(JSON.parse(value)); }
-            catch { resolve(fallback); }
-          });
-        });
+        return await new Promise(res =>
+          tg.CloudStorage.getItem(key, (e, v) =>
+            res(!e && v ? JSON.parse(v) : fallback)
+          )
+        );
       }
-      const raw = localStorage.getItem(key);
-      return raw ? JSON.parse(raw) : fallback;
+      return JSON.parse(localStorage.getItem(key)) || fallback;
     } catch {
       return fallback;
     }
   },
-
-  async save(key, data) {
-    const value = JSON.stringify(data);
-    try {
-      if (tg?.CloudStorage) {
-        tg.CloudStorage.setItem(key, value, err => {
-          if (err) console.error('CloudStorage error:', err);
-        });
-      }
-      localStorage.setItem(key, value);
-    } catch (e) {
-      console.error('Save error:', e);
-    }
+  save(key, data) {
+    const v = JSON.stringify(data);
+    tg?.CloudStorage?.setItem(key, v);
+    localStorage.setItem(key, v);
   }
 };
 
-/* ================= DATA ================= */
+/* ========= CONSTANTS ========= */
+const CRITERIA = ["Posture","Balance","Foot Skills","Timing","Connection"];
+const DANCES = ["Waltz","Tango","Viennese","Foxtrot","Quickstep","Cha-Cha","Samba","Rumba","Paso","Jive"];
 
-const JS_COMPONENTS = {
-  "Technical Quality": [
-    "Posture","Dance Holds","Centre","Balance","Foot Skills",
-    "Body Actions","Drive Action","Preparation to Move",
-    "Rise and Fall","Swing","Pivots","Skilled Figures"
-  ],
-  "Movement To Music": ["Timing","Rhythm","Musical Structure"],
-  "Partnering Skills": ["Communication","Balance","Time & Space"],
-  "Choreography": ["Structure","Positioning","Energy","Character"]
-};
-
-/* ================= APP ================= */
-
+/* ========= APP ========= */
 function App() {
-  const [loading, setLoading] = useState(true);
-  const [criteriaData, setCriteriaData] = useState({});
-  const [selectedCriteria, setSelectedCriteria] = useState(null);
-  const [showModal, setShowModal] = useState(false);
-  const [form, setForm] = useState({});
-  const [toast, setToast] = useState(null);
+  const [students, setStudents] = useState([]);
+  const [competitions, setCompetitions] = useState([]);
+  const [activeStudent, setActiveStudent] = useState(null);
+  const [showComp, setShowComp] = useState(false);
+  const [form, setForm] = useState({ scores:{} });
 
-  /* ===== INIT ===== */
   useEffect(() => {
     tg?.ready?.();
     tg?.expand?.();
-    document.body.style.overflow = 'hidden';
-
     (async () => {
-      const criteria = await storage.load('criteriaData', {});
-      setCriteriaData(criteria);
-      setLoading(false);
+      setStudents(await storage.load("students", []));
+      setCompetitions(await storage.load("competitions", []));
     })();
   }, []);
 
-  /* ===== SAVE ===== */
   useEffect(() => {
-    if (!loading) storage.save('criteriaData', criteriaData);
-  }, [criteriaData]);
+    storage.save("students", students);
+    storage.save("competitions", competitions);
+  }, [students, competitions]);
 
-  const showToast = (msg, type='success') => {
-    setToast({ msg, type });
-    setTimeout(() => setToast(null), 2500);
-  };
-
-  /* ===== SAVE NOTE ===== */
-  const saveNote = () => {
-    if (!form.component || !form.subComponent || !form.text) {
-      showToast('Заполните заметку', 'error');
-      return;
-    }
-
-    const note = {
-      id: Date.now(),
-      text: form.text,
-      source: form.source || '',
-      date: new Date().toISOString().split('T')[0]
-    };
-
-    setCriteriaData(prev => ({
+  const saveCompetition = () => {
+    setCompetitions(prev => [
       ...prev,
-      [form.component]: {
-        ...(prev[form.component] || {}),
-        [form.subComponent]: {
-          notes: [
-            ...((prev[form.component]?.[form.subComponent]?.notes) || []),
-            note
-          ]
-        }
+      {
+        id: Date.now(),
+        studentId: activeStudent.id,
+        ...form
       }
-    }));
-
-    showToast('Заметка добавлена');
-    setShowModal(false);
-    setForm({});
+    ]);
+    setForm({ scores:{} });
+    setShowComp(false);
   };
 
-  if (loading) {
+  if (!activeStudent) {
     return (
-      <div className="min-h-screen flex items-center justify-center text-xl">
-        Загрузка...
+      <div className="p-4 max-w-xl mx-auto">
+        <h1 className="text-2xl font-bold mb-4">👥 Пары</h1>
+        {students.map(s => (
+          <div key={s.id}
+            onClick={() => setActiveStudent(s)}
+            className="bg-slate-800/50 p-4 rounded-lg mb-3 cursor-pointer">
+            <div className="font-bold">{s.leader} – {s.follower}</div>
+            <div className="text-sm text-slate-400">{s.level}</div>
+          </div>
+        ))}
       </div>
     );
   }
 
+  const comps = competitions.filter(c => c.studentId === activeStudent.id);
+
   return (
-    <div className="p-4 max-w-3xl mx-auto fade-in">
+    <div className="p-4 max-w-3xl mx-auto">
+      <button className="text-blue-400 mb-3"
+        onClick={() => setActiveStudent(null)}>← Назад</button>
 
-      {!selectedCriteria && (
-        <>
-          <h1 className="text-2xl font-bold mb-4">🔧 Критерии WDSF</h1>
+      <h1 className="text-2xl font-bold mb-2">
+        {activeStudent.leader} – {activeStudent.follower}
+      </h1>
 
-          {Object.entries(JS_COMPONENTS).map(([group, items]) => (
-            <div key={group} className="mb-4">
-              <h2 className="text-lg text-purple-400 mb-2">{group}</h2>
+      <h2 className="text-xl font-bold mt-6 mb-3">🏆 Соревнования</h2>
 
-              {items.map(item => {
-                const count =
-                  criteriaData[group]?.[item]?.notes?.length || 0;
+      {comps.map(c => {
+        const avg =
+          Object.values(c.scores).reduce((a,b)=>a+b,0) /
+          Object.values(c.scores).length;
 
-                return (
-                  <div
-                    key={item}
-                    onClick={() => setSelectedCriteria({ group, item })}
-                    className="p-3 bg-slate-800/50 rounded-lg mb-2 cursor-pointer flex justify-between"
-                  >
-                    <span>{item}</span>
-                    {count > 0 && <span className="text-green-400">{count}</span>}
-                  </div>
-                );
-              })}
+        return (
+          <div key={c.id} className="bg-slate-800/50 p-4 rounded mb-3">
+            <div className="font-bold">{c.name}</div>
+            <div className="text-sm text-slate-400">
+              {c.date} • {c.dance} • ⭐ {avg.toFixed(1)}
             </div>
-          ))}
-        </>
-      )}
-
-      {selectedCriteria && (
-        <>
-          <button
-            onClick={() => setSelectedCriteria(null)}
-            className="text-blue-400 mb-3"
-          >
-            ← Назад
-          </button>
-
-          <h2 className="text-xl font-bold mb-1">
-            {selectedCriteria.item}
-          </h2>
-          <div className="text-sm text-slate-400 mb-4">
-            {selectedCriteria.group}
+            <div className="text-sm mt-2">{c.comment}</div>
           </div>
+        );
+      })}
 
-          <button
-            onClick={() => {
-              setForm({
-                component: selectedCriteria.group,
-                subComponent: selectedCriteria.item
-              });
-              setShowModal(true);
-            }}
-            className="mb-4 px-4 py-2 bg-gradient-to-r from-purple-600 to-pink-600 rounded-lg"
-          >
-            + Добавить заметку
-          </button>
+      <button
+        onClick={() => setShowComp(true)}
+        className="mt-4 bg-purple-600 px-4 py-2 rounded">
+        ➕ Добавить соревнование
+      </button>
 
-          {(criteriaData[selectedCriteria.group]
-            ?.[selectedCriteria.item]
-            ?.notes || []).map(note => (
-            <div
-              key={note.id}
-              className="bg-slate-900/50 p-4 rounded-lg mb-3 border-l-4 border-green-500"
-            >
-              <div className="text-green-400 text-sm mb-1">
-                {note.source || 'Источник не указан'}
-              </div>
-              <div>{note.text}</div>
-              <div className="text-xs text-slate-500 mt-2">{note.date}</div>
-            </div>
-          ))}
-        </>
-      )}
-
-      {/* MODAL */}
-      {showModal && (
-        <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50">
+      {showComp && (
+        <div className="fixed inset-0 bg-black/70 flex items-center justify-center">
           <div className="bg-slate-800 p-5 rounded-xl w-full max-w-md">
-            <h3 className="text-lg font-bold mb-3">Новая заметка</h3>
+            <input className="w-full mb-2 px-3 py-2 bg-slate-900 rounded"
+              placeholder="Название турнира"
+              onChange={e => setForm({ ...form, name:e.target.value })} />
 
-            <input
+            <input type="date"
               className="w-full mb-2 px-3 py-2 bg-slate-900 rounded"
-              placeholder="Источник"
-              value={form.source || ''}
-              onChange={e => setForm({...form, source: e.target.value})}
-            />
+              onChange={e => setForm({ ...form, date:e.target.value })} />
 
-            <textarea
-              className="w-full mb-4 px-3 py-2 bg-slate-900 rounded"
-              rows="5"
-              placeholder="Текст заметки"
-              value={form.text || ''}
-              onChange={e => setForm({...form, text: e.target.value})}
-            />
+            <select className="w-full mb-2 px-3 py-2 bg-slate-900 rounded"
+              onChange={e => setForm({ ...form, dance:e.target.value })}>
+              <option>Танец</option>
+              {DANCES.map(d => <option key={d}>{d}</option>)}
+            </select>
 
-            <div className="flex gap-2">
-              <button
-                onClick={saveNote}
-                className="flex-1 bg-purple-600 py-2 rounded"
-              >
-                Сохранить
-              </button>
-              <button
-                onClick={() => setShowModal(false)}
-                className="bg-slate-600 px-4 rounded"
-              >
-                Отмена
-              </button>
-            </div>
+            {CRITERIA.map(c => (
+              <input key={c} type="number" min="1" max="10"
+                className="w-full mb-2 px-3 py-2 bg-slate-900 rounded"
+                placeholder={`${c} (1–10)`}
+                onChange={e =>
+                  setForm({
+                    ...form,
+                    scores:{ ...form.scores, [c]:Number(e.target.value) }
+                  })
+                } />
+            ))}
+
+            <textarea className="w-full mb-3 px-3 py-2 bg-slate-900 rounded"
+              placeholder="Комментарий"
+              onChange={e => setForm({ ...form, comment:e.target.value })} />
+
+            <button
+              onClick={saveCompetition}
+              className="w-full bg-purple-600 py-2 rounded">
+              Сохранить старт
+            </button>
           </div>
         </div>
       )}
-
-      {toast && (
-        <div className={`fixed bottom-4 right-4 px-4 py-2 rounded-lg ${
-          toast.type === 'success' ? 'bg-green-600' : 'bg-red-600'
-        }`}>
-          {toast.msg}
-        </div>
-      )}
-
     </div>
   );
 }
 
-ReactDOM.render(<App />, document.getElementById('root'));
+ReactDOM.render(<App />, document.getElementById("root"));
 </script>
 </body>
 </html>
