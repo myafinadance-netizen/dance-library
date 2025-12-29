@@ -31,29 +31,42 @@ useEffect(()=>{if(!loading)saveKey('students',students)},[students]);useEffect((
 const showToast=(msg,type='success')=>{setToast({msg,type});setTimeout(()=>setToast(null),3000)};
 const openModal=(type,item=null)=>{setModalType(type);setEditingItem(item);setForm(item||{});setShowModal(true)};
 const closeModal=()=>{setShowModal(false);setForm({});setEditingItem(null);setModalType(null)};
-const saveModal=()=>{
-if(modalType==='student'){if(editingItem){setStudents(students.map(s=>s.id===editingItem.id?{...form,id:editingItem.id}:s));showToast('Обновлено')}else{setStudents([...students,{...form,id:Date.now()}]);showToast('Добавлено')}}
+const saveModal=async()=>{
+if(modalType==='student'){
+const updatedStudents=editingItem?students.map(s=>s.id===editingItem.id?{...form,id:editingItem.id}:s):[...students,{...form,id:Date.now()}];
+setStudents(updatedStudents);
+await saveKey('students',updatedStudents);
+showToast(editingItem?'Обновлено':'Добавлено')
+}
 if(modalType==='criteriaNote'){
 const key = `${form.component}_${form.subComponent}`;
 const existingData = criteriaData[key] || {};
 const existingNotes = existingData.notes || [];
+let updatedNotes;
 if(form.id){
-const updatedNotes = existingNotes.map(n=>n.id===form.id?{id:form.id,text:form.noteText,source:form.source||'Источник не указан',date:form.date}:n);
-setCriteriaData({...criteriaData,[key]:{...existingData,notes:updatedNotes}});
+updatedNotes = existingNotes.map(n=>n.id===form.id?{id:form.id,text:form.noteText,source:form.source||'Источник не указан',date:form.date}:n);
 showToast('Заметка обновлена')
 }else{
 const newNote = {id:Date.now(),text:form.noteText,source:form.source||'Источник не указан',date:new Date().toISOString().split('T')[0]};
-const updatedNotes = [...existingNotes,newNote];
-setCriteriaData({...criteriaData,[key]:{...existingData,notes:updatedNotes}});
+updatedNotes = [...existingNotes,newNote];
 showToast('Заметка добавлена')
 }
+const updatedCriteriaData={...criteriaData,[key]:{...existingData,notes:updatedNotes}};
+setCriteriaData(updatedCriteriaData);
+await saveKey('criteriaData',updatedCriteriaData);
 closeModal();return
 }
-if(modalType==='figureTechnique'){const key=`${form.dance}_${form.class}_${form.figureName}`;setFiguresData({...figuresData,[key]:{name:form.figureName,dance:form.dance,class:form.class,technique:form.technique,notes:form.notes}});showToast('Техника сохранена')}
+if(modalType==='figureTechnique'){
+const key=`${form.dance}_${form.class}_${form.figureName}`;
+const updatedFiguresData={...figuresData,[key]:{name:form.figureName,dance:form.dance,class:form.class,technique:form.technique,notes:form.notes}};
+setFiguresData(updatedFiguresData);
+await saveKey('figuresData',updatedFiguresData);
+showToast('Техника сохранена')
+}
 closeModal()
 };
 const deleteItem=(type,id)=>{if(!confirm('Удалить?'))return;if(type==='student'){setStudents(students.filter(s=>s.id!==id));showToast('Удалено','error')}};
-const deleteCriteriaNote=(component,subComponent,noteId)=>{if(!confirm('Удалить заметку?'))return;const key=`${component}_${subComponent}`;const existingData=criteriaData[key]||{};const updatedNotes=(existingData.notes||[]).filter(n=>n.id!==noteId);setCriteriaData({...criteriaData,[key]:{...existingData,notes:updatedNotes}});showToast('Заметка удалена','error')};
+const deleteCriteriaNote=async(component,subComponent,noteId)=>{if(!confirm('Удалить заметку?'))return;const key=`${component}_${subComponent}`;const existingData=criteriaData[key]||{};const updatedNotes=(existingData.notes||[]).filter(n=>n.id!==noteId);const updatedCriteriaData={...criteriaData,[key]:{...existingData,notes:updatedNotes}};setCriteriaData(updatedCriteriaData);await saveKey('criteriaData',updatedCriteriaData);showToast('Заметка удалена','error')};
 const exportData=()=>{const data={students,assessments,criteriaData,figuresData};const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download=`dance-library-${new Date().toISOString().split('T')[0]}.json`;a.click();URL.revokeObjectURL(url);showToast('Экспортировано')};
 const filteredStudents=students.filter(s=>{const f=filters.students;if(f.search&&!s.name.toLowerCase().includes(f.search.toLowerCase())&&!s.partner.toLowerCase().includes(f.search.toLowerCase()))return false;if(f.level&&s.level!==f.level)return false;return true});
 const stats={totalStudents:students.length,totalCriteria:Object.keys(criteriaData).length,totalFigures:Object.keys(figuresData).length};
